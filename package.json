@@ -1,0 +1,52 @@
+{
+  "name": "wf-hellboy",
+  "author": "innokentiyt",
+  "version": "1.0.0",
+  "keywords": ["pebble-app"],
+  "private": true,
+  "dependencies": {},
+  "pebble": {
+    "displayName": "Hellboy",
+    "uuid": "5c4aaed1-e271-4004-b649-0b99dd3cc637",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
+    "targetPlatforms": [
+      "aplite",
+      "basalt",
+      "diorite",
+      "flint"
+    ],
+    "watchapp": {
+      "watchface": true
+    },
+    "messageKeys": [
+      "dummy"
+    ],
+    "resources": {
+      "media": [
+        {
+          "type": "bitmap",
+          "name": "BACKGROUND",
+          "file": "images/background.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "BT_ICON",
+          "file": "images/bt.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "MENU_ICON",
+          "file": "images/icon.png",
+          "menuIcon": true
+        },
+        {
+          "type": "font",
+          "name": "JOST_MEDIUM_34",
+          "file": "fonts/Jost-Medium.ttf",
+          "compatibility":"2.7"
+        }
+      ]
+    }
+  }
+}
