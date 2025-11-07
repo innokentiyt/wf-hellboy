@@ -2,3 +2,4 @@
 build
 .lock-waf_linux_build
 .idea
+node_modules

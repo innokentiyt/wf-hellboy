@@ -1,10 +1,14 @@
 {
   "name": "wf-hellboy",
   "author": "innokentiyt",
-  "version": "1.0.0",
-  "keywords": ["pebble-app"],
+  "version": "1.1.0",
+  "keywords": [
+    "pebble-app"
+  ],
   "private": true,
-  "dependencies": {},
+  "dependencies": {
+    "pebble-clay": "^1.0.4"
+  },
   "pebble": {
     "displayName": "Hellboy",
     "uuid": "5c4aaed1-e271-4004-b649-0b99dd3cc637",
@@ -18,8 +22,13 @@
     "watchapp": {
       "watchface": true
     },
+    "capabilities": [
+      "configurable"
+    ],
     "messageKeys": [
-      "dummy"
+      "show_am_pm",
+      "show_leading_zero",
+      "show_weekday"
     ],
     "resources": {
       "media": [
@@ -35,6 +44,16 @@
         },
         {
           "type": "bitmap",
+          "name": "AM_ICON",
+          "file": "images/am.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "PM_ICON",
+          "file": "images/pm.png"
+        },
+        {
+          "type": "bitmap",
           "name": "MENU_ICON",
           "file": "images/icon.png",
           "menuIcon": true
@@ -43,7 +62,7 @@
           "type": "font",
           "name": "JOST_MEDIUM_34",
           "file": "fonts/Jost-Medium.ttf",
-          "compatibility":"2.7"
+          "compatibility": "2.7"
         }
       ]
     }
