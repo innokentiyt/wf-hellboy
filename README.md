@@ -6,6 +6,7 @@ A simple watchface for Pebble. Insipred by an illustration from "Hellboy: The Lo
 Features:
 - battery meter is a bottom thin line under ⚡ on HB's right shoulder;
 - bt connection indicator, no vibration;
+- unobstructed area squish;
 - settings:
     - toggle am/pm;
     - toggle leading zero;
@@ -15,5 +16,5 @@ Features:
 https://apps.rebble.io/en_US/application/690c15d63e734c0009b9df2a
 
 # todo
-- battery meter rework
 - Pebble Time 2 support
+- get rid of pebble-clay?

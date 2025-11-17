@@ -3,9 +3,12 @@
 #define SETTINGS_KEY 1
 
 static Window *s_main_window;
+static Layer *s_window_layer;
 
 static TextLayer *s_time_layer;
 static GFont s_time_font;
+
+static TextLayer *s_time_obstructed_layer;
 
 static Layer *s_am_pm_layer;
 static BitmapLayer *s_am_icon_layer;
@@ -59,6 +62,7 @@ static void update_time() {
     strftime(s_date_buffer, sizeof(s_date_buffer), settings.show_weekday ? "%a %e" : "%b %e", tick_time);
 
     text_layer_set_text(s_time_layer, s_time_buffer);
+    text_layer_set_text(s_time_obstructed_layer, s_time_buffer);
     text_layer_set_text(s_date_layer, s_date_buffer);
 
     layer_set_hidden(s_am_pm_layer, !settings.show_am_pm);
@@ -75,22 +79,22 @@ static void update_time() {
 
 // default settings initializer
 static void prv_default_settings() {
-  settings.show_am_pm = false;
-  settings.show_leading_zero = true;
-  settings.show_weekday = false;
+    settings.show_am_pm = false;
+    settings.show_leading_zero = true;
+    settings.show_weekday = false;
 }
 
 static void prv_load_settings() {
-  // Load the default settings
-  prv_default_settings();
-  // Read settings from persistent storage, if they exist
-  persist_read_data(SETTINGS_KEY, &settings, sizeof(settings));
+    // Load the default settings
+    prv_default_settings();
+    // Read settings from persistent storage, if they exist
+    persist_read_data(SETTINGS_KEY, &settings, sizeof(settings));
 }
 
 static void prv_save_settings() {
-  persist_write_data(SETTINGS_KEY, &settings, sizeof(settings));
-  // force update
-  update_time();
+    persist_write_data(SETTINGS_KEY, &settings, sizeof(settings));
+    // force update
+    update_time();
 }
 
 // AppMessage receive handler
@@ -145,14 +149,51 @@ static void bluetooth_callback(bool connected) {
     layer_mark_dirty(bitmap_layer_get_layer(s_bt_icon_layer));
 }
 
+static void prv_unobstructed_will_change(GRect final_unobstructed_screen_area, void *context) {
+    GRect full_bounds = layer_get_bounds(s_window_layer);
+    if (!grect_equal(&full_bounds, &final_unobstructed_screen_area)) {
+        // Screen is obstructed!
+        layer_set_hidden(text_layer_get_layer(s_date_layer), true);
+        layer_set_hidden(text_layer_get_layer(s_time_layer), true);
+
+        // move am/pm indicator up
+        GRect am_pm_frame = layer_get_frame(s_am_pm_layer);
+        am_pm_frame.origin.y = final_unobstructed_screen_area.size.h - 5 - 2;
+        layer_set_frame(s_am_pm_layer, am_pm_frame);
+
+        GRect time_obstructed_frame = layer_get_frame(text_layer_get_layer(s_time_obstructed_layer));
+        time_obstructed_frame.origin.y = final_unobstructed_screen_area.size.h - 18 - 16;
+        layer_set_frame(text_layer_get_layer(s_time_obstructed_layer), time_obstructed_frame);
+        layer_set_hidden(text_layer_get_layer(s_time_obstructed_layer), false);
+    }
+}
+
+static void prv_unobstructed_did_change(void *context) {
+    GRect full_bounds = layer_get_bounds(s_window_layer);
+    // Get the total available screen real-estate
+    GRect bounds = layer_get_unobstructed_bounds(s_window_layer);
+    if (grect_equal(&full_bounds, &bounds)) {
+        // Screen is no longer obstructed
+        layer_set_hidden(text_layer_get_layer(s_date_layer), false);
+        layer_set_hidden(text_layer_get_layer(s_time_layer), false);
+
+        // return am/pm indicator to original place
+        GRect am_pm_frame = layer_get_frame(s_am_pm_layer);
+        am_pm_frame.origin.y = full_bounds.size.h - 5 - 5;
+        layer_set_frame(s_am_pm_layer, am_pm_frame);
+
+        layer_set_hidden(text_layer_get_layer(s_time_obstructed_layer), true);
+    }
+}
+
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     update_time();
 }
 
 static void main_window_load(Window *window) {
     // Get information about the Window
-    Layer *window_layer = window_get_root_layer(window);
-    GRect bounds = layer_get_bounds(window_layer);
+    s_window_layer = window_get_root_layer(window);
+    GRect bounds = layer_get_bounds(s_window_layer);
 
     s_time_layer = text_layer_create(GRect(0, 120, bounds.size.w - 10, 50));
     s_time_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_JOST_MEDIUM_34));
@@ -160,6 +201,13 @@ static void main_window_load(Window *window) {
     text_layer_set_text_color(s_time_layer, GColorWhite);
     text_layer_set_font(s_time_layer, s_time_font);
     text_layer_set_text_alignment(s_time_layer, GTextAlignmentRight);
+
+    s_time_obstructed_layer = text_layer_create(GRect(0, 85, bounds.size.w - 10, 24)); // dummy y coordinate
+    layer_set_hidden(text_layer_get_layer(s_time_obstructed_layer), true);
+    text_layer_set_background_color(s_time_obstructed_layer, GColorClear);
+    text_layer_set_text_color(s_time_obstructed_layer, GColorWhite);
+    text_layer_set_font(s_time_obstructed_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+    text_layer_set_text_alignment(s_time_obstructed_layer, GTextAlignmentRight);
 
     s_am_pm_layer = layer_create(GRect(bounds.size.w - 14 - 11, bounds.size.h - 5 - 5, 14, 5));
     s_am_icon_bitmap = gbitmap_create_with_resource(RESOURCE_ID_AM_ICON);
@@ -189,18 +237,34 @@ static void main_window_load(Window *window) {
     layer_set_update_proc(s_battery_layer, battery_update_proc);
 
     // order has meaning
-    layer_add_child(window_layer, bitmap_layer_get_layer(s_background_layer));
-    layer_add_child(window_layer, text_layer_get_layer(s_time_layer));
-    layer_add_child(window_layer, text_layer_get_layer(s_date_layer));
-    layer_add_child(window_layer, bitmap_layer_get_layer(s_bt_icon_layer));
-    layer_add_child(window_layer, s_battery_layer);
-    layer_add_child(window_layer, s_am_pm_layer);
+    layer_add_child(s_window_layer, bitmap_layer_get_layer(s_background_layer));
+    layer_add_child(s_window_layer, text_layer_get_layer(s_time_layer));
+    layer_add_child(s_window_layer, text_layer_get_layer(s_time_obstructed_layer));
+    layer_add_child(s_window_layer, text_layer_get_layer(s_date_layer));
+    layer_add_child(s_window_layer, bitmap_layer_get_layer(s_bt_icon_layer));
+    layer_add_child(s_window_layer, s_battery_layer);
+    layer_add_child(s_window_layer, s_am_pm_layer);
         layer_add_child(s_am_pm_layer, bitmap_layer_get_layer(s_am_icon_layer));
         layer_add_child(s_am_pm_layer, bitmap_layer_get_layer(s_pm_icon_layer));
+
+    UnobstructedAreaHandlers handlers = {
+        .will_change = prv_unobstructed_will_change,
+        .did_change = prv_unobstructed_did_change
+    };
+    unobstructed_area_service_subscribe(handlers, NULL);
+    GRect obstructed_bounds = layer_get_unobstructed_bounds(s_window_layer);
+    if (!grect_equal(&bounds, &obstructed_bounds)) {
+        // Screen is obstructed!
+        prv_unobstructed_will_change(obstructed_bounds, NULL);
+    }
 }
 
 static void main_window_unload(Window *window) {
+    unobstructed_area_service_unsubscribe();
+
     text_layer_destroy(s_time_layer);
+
+    text_layer_destroy(s_time_obstructed_layer);
 
     gbitmap_destroy(s_am_icon_bitmap);
     bitmap_layer_destroy(s_am_icon_layer);
