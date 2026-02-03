@@ -12,7 +12,7 @@ Features:
     - toggle leading zero;
     - weekday or month name;
 
-# pebble store
+# rebble store
 https://apps.rebble.io/en_US/application/690c15d63e734c0009b9df2a
 
 # todo
